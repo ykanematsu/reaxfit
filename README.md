@@ -9,7 +9,7 @@ Parameter fitting for lammps-reaxff with differential_evolution of scipy.
 ```sh
 conda install -c conda-forge lammps
 conda install scipy numpy
-pip3 ..
+pip3 git+https://github.com/ykanematsu/reaxfit.git
 ```
 ## Install lammps from source code
 ```sh
