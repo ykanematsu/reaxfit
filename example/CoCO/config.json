@@ -1,0 +1,14 @@
+{
+ "refE_file": "refE",
+ "refF_file": "refF",
+ "datafile": "data0",
+ "initfile": "ffield.temp",
+ "midfile": "ffield.currentbest",
+ "endfile": "ffield.end",
+ "bound": 0.05,
+ "stopfile": "STOP",
+ "seed": null,
+ "workers": 32,
+ "maxiter": 1000,
+ "scrdir": "scr"
+}

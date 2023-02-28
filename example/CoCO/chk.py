@@ -7,7 +7,8 @@ if len(sys.argv)>1:
     fn=sys.argv[1]
     print(fn)
     fftemp=fn
-hoge=reaxfit.reaxfit(fftemp=fftemp)
+hoge=reaxfit.reaxfit()
+hoge.config(initfile=fftemp)
 pes,fns=hoge.reax()
 pes-=pes[0]
 pes*=0.043364124 # kcal/mol to ev
