@@ -78,6 +78,7 @@ class reaxfit():
     self.refF=refF
     def callbackF(xk,convergence=False,fout=None):
       fname=midfile
+      sys.stdout.flush()
       if fout: fname=fout
       with open(fname,"w") as f:
           _x=np.round(xk,5)
