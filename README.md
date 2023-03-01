@@ -1,5 +1,5 @@
 # ReaxFit
-Parameter fitting for lammps-reaxff with differential_evolution of scipy.
+Parameter-fitting module for lammps-reaxff with differential_evolution of scipy.
 ## Requirements
 - lammps (library)
 - numpy
@@ -11,7 +11,7 @@ conda install -c conda-forge lammps
 conda install scipy numpy
 pip3 install git+https://github.com/ykanematsu/reaxfit.git
 ```
-- Install lammps from source code
+- [option] install lammps from source code
 ```sh
 mkdir build
 cd build
@@ -19,3 +19,4 @@ cmake ../cmake -DLAMMPS_EXCEPTIONS=yes -DBUILD_SHARED_LIBS=yes -DMLIAP_ENABLE_PY
 make -j4
 make install-python
 ```
+## Useage 

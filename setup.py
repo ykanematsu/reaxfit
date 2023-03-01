@@ -8,7 +8,13 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
         name="reaxfit",
-        version="0.0.1",
+        author="ykanematsu",
+        version="0.0.5",
+        license='MIT',
+        url='https://github.com/ykanematsu/reaxfit',
+        description='parameter fitting for ReaxFF',
+        long_description=long_description,
+        long_description_content_type='text/markdown',
         install_requires=["scipy","numpy","lammps"],
         package_dir={"": "src"},
         packages=find_packages(where="src"),
