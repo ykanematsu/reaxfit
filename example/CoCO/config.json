@@ -7,7 +7,7 @@
  "endfile": "ffield.end",
  "bound": 0.05,
  "stopfile": "STOP",
- "seed": null,
+ "seed": 1234,
  "workers": 32,
  "maxiter": 1000,
  "scrdir": "scr"
