@@ -151,8 +151,10 @@ class reaxfit():
           eval_fit=default_eval
       result = differential_evolution(eval_fit, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
                                   disp=True,maxiter=self.maxiter,tol=0.01,callback=dump_best,popsize=16,seed=self.seed)
-      print(result)
+      #print(result)
       dump_best(result.x,fout=self.endfile)
+      self.result=result
+      self.E,self.F=self.reax(result.x)
       return result
 
 if __name__ =='__main__':
