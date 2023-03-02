@@ -17,10 +17,10 @@ class reaxfit():
             "initfile":"ffield.temp", # initial template file
             "midfile":"ffield.currentbest", # intermediate file
             "endfile":"ffield.end", # final file
-            "bound":0.5, # defile range of parameters 
+            "bound":0.1, # define range of parameters 
             "stopfile":"STOP", # file for early stopping
             "seed":None, # file for early stopping
-            "workers":16, # file for early stopping
+            "workers":4, # file for early stopping
             "maxiter":1000, # maximum number of iteration
             "scrdir":"scr" # scratch directory
     }
@@ -33,21 +33,29 @@ class reaxfit():
     #self.config()
     return
 
-  def config(self,cfile=None,initfile=None):
+  def config(self,**kwargs):
     global dump_best
-    if cfile: self.cfile=cfile
+    if hasattr(kwargs,"cfile"): self.cfile=kwargs["cfile"]
     opt=self.option
     isconfig=os.path.isfile(self.cfile)
     if isconfig:
         print(f"read {self.cfile}")
         with open(self.cfile) as f:
-            opt.update(**json.load(f))
+            jwargs=json.load(f)
+            optk=opt.keys()&jwargs.keys()
+            opt.update(**{k:jwargs[k] for k in optk})
+            if(optk != jwargs.keys()): 
+                print("unrecognized options: ",*(jwargs.keys()-optk))
+    # overwrite options if given
+    if kwargs:
+        optk=opt.keys()&kwargs.keys()
+        opt.update(**{k:kwargs[k] for k in optk})
+        if(optk != kwargs.keys()): 
+            print("unrecognized options: ",*(kwargs.keys()-optk))
     midfile=opt["midfile"]
     stopfile=opt["stopfile"]
     for k in opt:
         setattr(self,k,opt[k])
-    # overwrite initfile if given
-    if initfile: self.initfile=initfile
     # create scratch directory
     os.makedirs(self.scrdir,exist_ok=True)
     with open(self.refE_file) as f:
