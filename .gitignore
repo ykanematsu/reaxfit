@@ -1,6 +1,9 @@
 *
 !*.py
+!*.toml
 !.gitignore
+!.github
+!.github/**
 !README.md
 !data
 !example
