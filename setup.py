@@ -9,7 +9,7 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 setup(
         name="reaxfit",
         author="ykanematsu",
-        version="0.0.9",
+        version="0.0.10",
         license='MIT',
         url='https://github.com/ykanematsu/reaxfit',
         description='parameter fitting for ReaxFF',

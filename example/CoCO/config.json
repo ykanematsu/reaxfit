@@ -5,9 +5,9 @@
  "initfile": "ffield.temp",
  "midfile": "ffield.currentbest",
  "endfile": "ffield.end",
- "bound": 0.05,
+ "bound": 0.08,
  "stopfile": "STOP",
- "seed": 1234,
+ "seed": 101,
  "workers": 32,
  "maxiter": 1000,
  "scrdir": "scr"
