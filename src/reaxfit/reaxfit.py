@@ -20,6 +20,7 @@ class reaxfit():
             "bound":0.1, # define range of parameters 
             "stopfile":"STOP", # file for early stopping
             "seed":None, # file for early stopping
+            "tol":0.01, # tolerance for convergence
             "workers":4, # file for early stopping
             "maxiter":1000, # maximum number of iteration
             "scrdir":"scr" # scratch directory
@@ -30,7 +31,6 @@ class reaxfit():
         with open(cfile,"w") as f:
             json.dump(self.option,f,indent=1)
         sys.exit()
-    #self.config()
     return
 
   def config(self,**kwargs):
@@ -134,23 +134,26 @@ class reaxfit():
       fns=np.array(fns)
       return pes,fns
 
-  def fit(self,eval_fit=None):
+  def fit(self,func=None):
       global dump_best
       if not hasattr(self,"x0"): self.config()
       #refE,refF=self.refE,self.refF
       print(f"initial {len(self.x0)} parameters : {self.x0}")
-      if not eval_fit:
+      if not func:
+          _idx0=np.where(self.refE==0.0)[0]
+          idx0=_idx0[0] if _idx0 else 0
           @self.set_eval
           def default_eval(pes,fns,refE,refF):
             fns*=0.043364124 # kcal/mol to ev
-            pes-=pes[0] # initial structure is reference
+            pes-=pes[idx0] # initial structure is reference by default
             pes*=0.043364124 # kcal/mol to ev
+            pes+=refE[idx0]
             pes-=refE
             fns-=refF
-            return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[0]*fns[0]/10
-          eval_fit=default_eval
-      result = differential_evolution(eval_fit, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
-                                  disp=True,maxiter=self.maxiter,tol=0.01,callback=dump_best,popsize=16,seed=self.seed)
+            return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[idx0]*fns[idx0]/10
+          func=default_eval
+      result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
+                                  disp=True,maxiter=self.maxiter,tol=self.tol,callback=dump_best,popsize=16,seed=self.seed)
       #print(result)
       dump_best(result.x,fout=self.endfile)
       self.result=result
