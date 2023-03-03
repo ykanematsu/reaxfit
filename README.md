@@ -20,3 +20,4 @@ make -j4
 make install-python
 ```
 ## Useage 
+- See [A sample on colab](https://colab.research.google.com/github/ykanematsu/reaxfit/blob/master/reaxfit_sample.ipynb)
