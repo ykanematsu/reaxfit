@@ -10,3 +10,4 @@
 !example/**
 !src
 !src/*
+_version.py
