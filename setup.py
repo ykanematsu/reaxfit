@@ -9,7 +9,8 @@ long_description = (here / "README.md").read_text(encoding="utf-8")
 setup(
         name="reaxfit",
         author="ykanematsu",
-        version="0.0.14",
+        use_scm_version=True,
+        setup_requires=["setuptools_scm"],
         license='MIT',
         url='https://github.com/ykanematsu/reaxfit',
         description='parameter fitting for ReaxFF',
