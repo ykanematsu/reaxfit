@@ -9,15 +9,12 @@ Parameter-fitting module for lammps-reaxff with differential_evolution of scipy.
 ```sh
 conda install -c conda-forge lammps
 conda install scipy numpy
-pip3 install git+https://github.com/ykanematsu/reaxfit.git
+pip3 install reaxfit.git
 ```
-- [option] install lammps from source code
+- [option] install jupyterlab and ase
+It will be convenient to use reaxff with jupyterlab and ase.
 ```sh
-mkdir build
-cd build
-cmake ../cmake -DLAMMPS_EXCEPTIONS=yes -DBUILD_SHARED_LIBS=yes -DMLIAP_ENABLE_PYTHON=yes -DPKG_PYTHON=yes -DPKG_MANYBODY=yes -DPKG_REAXFF=yes -DPYTHON_EXECUTABLE:FILEPATH=`which python3`
-make -j4
-make install-python
+conda install -c conda-forge jupyterlab ase
 ```
 ## Useage 
 - See [A sample on colab](https://colab.research.google.com/github/ykanematsu/reaxfit/blob/main/reaxfit_sample.ipynb)
