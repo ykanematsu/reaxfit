@@ -16,7 +16,7 @@ setup(
         description='parameter fitting for ReaxFF',
         long_description=long_description,
         long_description_content_type='text/markdown',
-        install_requires=["scipy","numpy","lammps"],
+        #install_requires=["scipy","numpy","lammps"],
         package_dir={"": "src"},
         packages=find_packages(where="src"),
 )        

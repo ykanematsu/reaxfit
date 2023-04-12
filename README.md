@@ -9,7 +9,7 @@ Parameter-fitting module for lammps-reaxff with differential_evolution of scipy.
 ```sh
 conda install -c conda-forge lammps
 conda install scipy numpy
-pip3 install reaxfit.git
+pip3 install reaxfit
 ```
 - [option] install jupyterlab and ase
 It will be convenient to use reaxff with jupyterlab and ase.
