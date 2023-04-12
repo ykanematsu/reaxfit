@@ -11,6 +11,7 @@ conda install -c conda-forge lammps
 conda install scipy numpy
 pip3 install reaxfit
 ```
+For Windows, lammps from conda forge is not available. You can alternatively download the lammps binary with the python library from [lammps.org](https://packages.lammps.org/windows.html).
 - [option] install jupyterlab and ase
 It will be convenient to use reaxff with jupyterlab and ase.
 ```sh
