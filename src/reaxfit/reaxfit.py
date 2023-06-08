@@ -18,7 +18,7 @@ class reaxfit():
             "midfile":"ffield.currentbest", # intermediate file
             "endfile":"ffield.end", # final file
             "bound":0.1, # define range of parameters 
-            "bound1":0.1, # define range of parameters 
+            "bound2":0.1, # define range of parameters 
             "stopfile":"STOP", # file for early stopping
             "seed":None, # file for early stopping
             "tol":0.01, # tolerance for convergence
@@ -33,7 +33,7 @@ class reaxfit():
             json.dump(self.option,f,indent=1)
         sys.exit()
     return
-  def changes(self,file_name,atm1,atm2,numbers):
+  def changes(self,para,file_name,atm1,atm2,numbers):
     fileobj=open(file_name)
     text=fileobj.read().splitlines()
     general =text[1].split()
@@ -51,24 +51,25 @@ class reaxfit():
         j+=1
     bonds=text[x+1].split()
     bond_max =int(bonds[0])*2+2+x
-    print(x)
+    #print(x)
     i=x+1
     while i <= bond_max:
-         
-        
-        if text[i].startswith(f"{atm_dict[atm1]} {atm_dict[atm2]}") or text[i].startswith(f"{atm_dict[atm2]} {atm_dict[atm1]} "):
-            
-            
-            
-            
-
+        regax=re.compile(f"^\s*{atm_dict[atm1]}\s+{atm_dict[atm2]}\s|^\s*{atm_dict[atm2]}\s+{atm_dict[atm1]}\s")
+        fire=regax.findall(text[i])
+        if len(fire) != 0:
+            #print(i)
+            #print(text[i])
+            #print(text[i+1])
             d = text[i].split()
             if numbers <= 8:
-                if d[numbers+1].startswith("{"):
+                if d[numbers+1].startswith("{") or d[numbers+1].startswith("["):
                     pass
-                
-                else:
+                elif para=="{":
                     d[numbers+1]="{"+d[numbers+1]
+                    print(text[i])
+                    print(d[numbers+1])
+                else:
+                    d[numbers+1]="["+d[numbers+1]
                     print(text[i])
                     print(d[numbers+1])
                 result =" ".join(d)
@@ -77,14 +78,19 @@ class reaxfit():
                 i+=1
                 gyou = i
                 d = text[i].split()
-                if d[numbers-9].startswith("{"):
+                if d[numbers-9].startswith("{") or d[numbers-9].startswith("["):
                     pass
-                else:
+                elif para=="{":
                     d[numbers-9]="{"+d[numbers-9]
                     print(text[i])
                     print(d[numbers-9])
-                    
                     i-=1
+                else:
+                    d[numbers-9]="["+d[numbers-9]
+                    print(text[i])
+                    print(d[numbers-9])
+                    i-=1
+                    
                 result=" ".join(d)
         i+=1
     with open(file_name) as f:
@@ -93,7 +99,6 @@ class reaxfit():
     l.insert(gyou,f"{result}\n")
     with open(file_name,mode="w")as f:
         f.writelines(l)
-
   def config(self,**kwargs):
     global dump_best
     if hasattr(kwargs,"cfile"): self.cfile=kwargs["cfile"]
@@ -161,9 +166,10 @@ class reaxfit():
             t = (x-delta,x+delta)
             bounds.append(t)
         else:
-            sigma = abs(float(self.bound1)*x)
+            sigma = abs(float(self.bound2)*x)
             k=(x-sigma,x+sigma)
             bounds.append(k)
+    print(bounds)
     #print(bounds)
     self.bounds=bounds
     template=regex.sub("{}",_template)
