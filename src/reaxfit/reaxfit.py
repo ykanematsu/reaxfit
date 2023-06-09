@@ -34,8 +34,8 @@ class reaxfit():
         sys.exit()
     return
   def changes(self,para,file_name,atm1,atm2,numbers):
-    fileobj=open(file_name)
-    text=fileobj.read().splitlines()
+    with open(file_name) as f:
+        text=f.read().splitlines()
     general =text[1].split()
     generals = int(general[0]) + 1
     atom=text[generals+1].split()
@@ -133,35 +133,33 @@ class reaxfit():
     # read template and x0
     with open(self.initfile) as f:
       _template=f.read()
-    regex=re.compile("(\{[\d.-]+|\[[\d.-]+)")
+    regex=re.compile("[\{\[][\d.-]+")
     x0=regex.findall(_template)
-    hoge=[]
+    isBound1=[]
     x1 = 0
     for x1 in range(len(x0)):
         if x0[x1].startswith("{"):
-            hoge.append("True")
+            isBound1.append("True")
             x0[x1]=x0[x1].strip("{")
         else:
-            hoge.append("False")
+            isBound1.append("False")
             x0[x1]=x0[x1].strip("[")
         x1+=1
-    #print(hoge)
     #print(x0)
     self.x0=[float(x) for x in x0]
     #print(x1)
     self.template = _template
-    import sys
     # change {S
     # define bounds
     for x in self.x0:
         if x==0:
             print("error:0 cannot be used as a parameter.")
-            sys.exit()
+            sys.exit(1)
         else:
             pass
     bounds=[]
     for i,x in enumerate(self.x0):
-        if hoge[i] =="True":
+        if isBound1[i] =="True":
             delta = abs(float(self.bound)*x)
             t = (x-delta,x+delta)
             bounds.append(t)
@@ -169,7 +167,6 @@ class reaxfit():
             sigma = abs(float(self.bound2)*x)
             k=(x-sigma,x+sigma)
             bounds.append(k)
-    print(bounds)
     #print(bounds)
     self.bounds=bounds
     template=regex.sub("{}",_template)
