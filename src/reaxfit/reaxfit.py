@@ -6,33 +6,29 @@ from scipy.optimize import differential_evolution
 # global parameters are required for multiprocessing
 def wrap_eval(): pass
 def dump_best(): pass
-
-class reaxfit():
-  def __init__(self,cfile="config.json",dump_config=False):
-    self.cfile=cfile
-    self.option={
+default_option={
             "refE_file":"refE", # reference energy
             "refF_file":"refF", # reference force norm
             "datafile":"data0", # data file with initial structure
             "initfile":"ffield.temp", # initial template file
             "midfile":"ffield.currentbest", # intermediate file
             "endfile":"ffield.end", # final file
-            "bound":0.1, # define range of parameters 
-            "bound2":0.1, # define range of parameters 
+            "bound":0.1, # define range of parameters with "{"
+            "bound2":0.1, # define range of parameters  with "["
             "stopfile":"STOP", # file for early stopping
-            "seed":None, # file for early stopping
+            "seed":None, # seed for random number
             "tol":0.01, # tolerance for convergence
-            "workers":4, # file for early stopping
+            "workers":4, # number of cpus
             "maxiter":1000, # maximum number of iteration
             "scrdir":"scr" # scratch directory
-    }
-    isconfig=os.path.isfile(cfile)
-    if dump_config:
-        if isconfig: os.rename(cfile,cfile+".bk")
-        with open(cfile,"w") as f:
-            json.dump(self.option,f,indent=1)
-        sys.exit()
+}
+
+class reaxfit():
+  def __init__(self,cfile="config.json"):
+    self.cfile=cfile
+    self.option=default_option
     return
+
   def changes(self,para,file_name,atm1,atm2,numbers):
     with open(file_name) as f:
         text=f.read().splitlines()
@@ -99,6 +95,7 @@ class reaxfit():
     l.insert(gyou,f"{result}\n")
     with open(file_name,mode="w")as f:
         f.writelines(l)
+
   def config(self,**kwargs):
     global dump_best
     if hasattr(kwargs,"cfile"): self.cfile=kwargs["cfile"]
@@ -253,7 +250,31 @@ class reaxfit():
       return result
 
 if __name__ =='__main__':
-    reax=reaxfit()
-    result=reax.fit()
-    pes,fns=reax.reax(result.x)
-    print(pes,fns)
+    if len(sys.argv) <2:
+        reax=reaxfit()
+        result=reax.fit()
+        print("optmized parameters")
+        print(*[f'{p:.5f}' for p in result.x])
+        print("optmized energy and force")
+        print(*[f'{s:.5f}' for s in reax.E])
+        print(*[f'{f:.5f}' for f in reax.F])
+    elif sys.argv[1] == "init":
+        cfile="config.json"
+        if os.path.isfile(cfile): os.replace(cfile,cfile+".bk")
+        with open(cfile,"w") as f:
+            print("create config.json")
+            json.dump(default_option,f,indent=1)
+        sys.exit()
+    elif sys.argv[1] == "check":
+        target_file=default_option["midfile"]
+        if len(sys.argv) > 2: target_file = sys.argv[2]
+        if not os.path.isfile(target_file):
+            print(f"{target_file} not found")
+            sys.exit(1)
+        reax=reaxfit()
+        reax.config(initfile=target_file)
+        pes,fns=reax.reax()
+        print(f"energy and force for {target_file} without optimization (kcal/mol)")
+        print(*[f'{s:.5f}' for s in pes])
+        print(*[f'{f:.5f}' for f in fns])
+
