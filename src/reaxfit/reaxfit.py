@@ -7,8 +7,12 @@ from scipy.optimize import differential_evolution
 def wrap_eval(): pass
 def dump_best(): pass
 default_option={
-            "refE_file":"refE", # reference energy
-            "refF_file":"refF", # reference force norm
+            "refE_file":"refE", # reference energy file
+            "refF_file":"refF", # reference force norm file
+            "ref_eV":True, # units for reference energy is in eV
+            "relative_force":True, # force norms are relative as refE
+            "force_weight":1e-6, # penalty weight for force norms
+            "harmonic":0, # harmonic constraint on initial parameters
             "datafile":"data0", # data file with initial structure
             "initfile":"ffield.temp", # initial template file
             "midfile":"ffield.currentbest", # intermediate file
@@ -115,18 +119,27 @@ class reaxfit():
         opt.update(**{k:kwargs[k] for k in optk})
         if(optk != kwargs.keys()): 
             print("unrecognized options: ",*(kwargs.keys()-optk))
+    self.option=opt
     midfile=opt["midfile"]
     stopfile=opt["stopfile"]
     for k in opt:
         setattr(self,k,opt[k])
     # create scratch directory
     os.makedirs(self.scrdir,exist_ok=True)
+    # conver eV to kcal/mol if refE is in eV
+    _coeff = 1.0/0.043364124 if self.ref_eV else 1.0
     with open(self.refE_file) as f:
       refE=f.read().split()
+      _idx=[ i for i,v in enumerate(refE) if "*" in v ]+[len(refE)]
+      if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be reference
+      self.baseIdx=np.hstack([[_idx[i]]*(_idx[i+1]-_idx[i]) for i in range(len(_idx)-1)])
+      refE=[en.replace("*","") for en in refE]
     with open(self.refF_file) as f:
       refF=f.read().split()
-    refE=np.array(refE,dtype=float)
-    refF=np.array(refF,dtype=float)
+    refE=np.array(refE,dtype=float)*_coeff # relative energy
+    refE-=refE[self.baseIdx]
+    refF=np.array(refF,dtype=float)*_coeff
+    if self.relative_force: refF-=refF[self.baseIdx]
     # read template and x0
     with open(self.initfile) as f:
       _template=f.read()
@@ -182,17 +195,22 @@ class reaxfit():
           y=[f"{{{xx}" for xx in _x]
           f.write(template.format(*y))
       if os.path.isfile(stopfile):
-          print("optimization will be stopped")
+          print("optimization will be stopped by the stop file")
           os.remove(stopfile)
           return True
     dump_best=callbackF
     return
   def set_eval(self,func):
     global wrap_eval
+    _x0=np.array(self.x0)
     def wrap_eval(*args,**kwargs):
       pid=os.getpid()
       pes,fns=self.reax(*args,pid=pid)
-      return func(pes,fns,self.refE,self.refF)
+      output = func(pes,fns,self.refE,self.refF) 
+      if self.harmonic > 0:
+        deltax=(np.array(args[0])-_x0)/(_x0+0.01)
+        output+=deltax@deltax*self.harmonic
+      return output
     return wrap_eval
   def reax(self,xk=None,pid=0):
       x=xk if xk is not None else self.x0
@@ -226,20 +244,22 @@ class reaxfit():
   def fit(self,func=None):
       global dump_best
       if not hasattr(self,"x0"): self.config()
+      print("config parameters for fitting")
+      json.dump(self.option,sys.stdout)
+      print("")
       #refE,refF=self.refE,self.refF
       print(f"initial {len(self.x0)} parameters : {self.x0}")
       if not func:
-          _idx0=np.where(self.refE==0.0)[0]
-          idx0=_idx0[0] if _idx0 else 0
           @self.set_eval
           def default_eval(pes,fns,refE,refF):
-            fns*=0.043364124 # kcal/mol to ev
-            pes-=pes[idx0] # initial structure is reference by default
-            pes*=0.043364124 # kcal/mol to ev
-            pes+=refE[idx0]
+            pes-=pes[self.baseIdx] # initial structure is reference by default
             pes-=refE
+            if self.relative_force: fns-=fns[self.baseIdx]
             fns-=refF
-            return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[idx0]*fns[idx0]/10
+            fns*=self.force_weight
+            fmax=np.abs(fns).max()
+            return pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
+            #return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[0]*fns[0]/10
           func=default_eval
       result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
                                   disp=True,maxiter=self.maxiter,tol=self.tol,callback=dump_best,popsize=16,seed=self.seed)
