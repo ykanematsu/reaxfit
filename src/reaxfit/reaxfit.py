@@ -1,7 +1,7 @@
 from lammps import lammps
 import json,os,sys,re
 import numpy as np
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize
 
 # global parameters are required for multiprocessing
 def wrap_eval(): pass
@@ -24,6 +24,7 @@ default_option={
             "tol":0.01, # tolerance for convergence
             "workers":4, # number of cpus
             "maxiter":1000, # maximum number of iteration
+            "optimizer":"differential_evolution", # maximum number of iteration
             "scrdir":"scr" # scratch directory
 }
 
@@ -128,14 +129,21 @@ class reaxfit():
     os.makedirs(self.scrdir,exist_ok=True)
     # conver eV to kcal/mol if refE is in eV
     _coeff = 1.0/0.043364124 if self.ref_eV else 1.0
-    with open(self.refE_file) as f:
-      refE=f.read().split()
-      _idx=[ i for i,v in enumerate(refE) if "*" in v ]+[len(refE)]
-      if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be reference
-      self.baseIdx=np.hstack([[_idx[i]]*(_idx[i+1]-_idx[i]) for i in range(len(_idx)-1)])
-      refE=[en.replace("*","") for en in refE]
-    with open(self.refF_file) as f:
-      refF=f.read().split()
+    if os.path.isfile(self.refE_file):
+      with open(self.refE_file) as f:
+        refE=f.read().split()
+        _idx=[ i for i,v in enumerate(refE) if "*" in v ]+[len(refE)]
+        if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be reference
+        self.baseIdx=np.hstack([[_idx[i]]*(_idx[i+1]-_idx[i]) for i in range(len(_idx)-1)])
+        refE=[en.replace("*","") for en in refE]
+    else:
+      self.baseIdx=np.array([0])
+      refE=[0.0]
+    if os.path.isfile(self.refF_file):
+      with open(self.refF_file) as f:
+        refF=f.read().split()
+    else:
+      refF=[0.0]
     refE=np.array(refE,dtype=float)*_coeff # relative energy
     refE-=refE[self.baseIdx]
     refF=np.array(refF,dtype=float)*_coeff
@@ -252,18 +260,23 @@ class reaxfit():
       if not func:
           @self.set_eval
           def default_eval(pes,fns,refE,refF):
+            pes0=pes[0]
             pes-=pes[self.baseIdx] # initial structure is reference by default
             pes-=refE
             if self.relative_force: fns-=fns[self.baseIdx]
             fns-=refF
             fns*=self.force_weight
             fmax=np.abs(fns).max()
-            return pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
+            return np.sign(pes0)*np.log10(np.abs(pes0)+1) + np.log10(fns@fns+1)
+            #return pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
             #return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[0]*fns[0]/10
           func=default_eval
-      result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
+      if self.optimizer == "differential_evolution":
+        result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
                                   disp=True,maxiter=self.maxiter,tol=self.tol,callback=dump_best,popsize=16,seed=self.seed)
-      #print(result)
+      else:
+        result = minimize(func,x0=self.x0,method=self.optimizer,tol=self.tol,callback=dump_best,jac='3-point') 
+      print(result)
       dump_best(result.x,fout=self.endfile)
       self.result=result
       self.E,self.F=self.reax(result.x)
