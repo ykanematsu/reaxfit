@@ -267,8 +267,8 @@ class reaxfit():
             fns-=refF
             fns*=self.force_weight
             fmax=np.abs(fns).max()
-            return np.sign(pes0)*np.log10(np.abs(pes0)+1) + np.log10(fns@fns+1)
-            #return pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
+            #return np.sign(pes0)*np.log10(np.abs(pes0)+1) + np.log10(fns@fns+1)
+            return pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
             #return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[0]*fns[0]/10
           func=default_eval
       if self.optimizer == "differential_evolution":
