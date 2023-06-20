@@ -1,38 +1,39 @@
 from lammps import lammps
 import json,os,sys,re
 import numpy as np
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize
 
 # global parameters are required for multiprocessing
 def wrap_eval(): pass
 def dump_best(): pass
-
-class reaxfit():
-  def __init__(self,cfile="config.json",dump_config=False):
-    self.cfile=cfile
-    self.option={
-            "refE_file":"refE", # reference energy
-            "refF_file":"refF", # reference force norm
+default_option={
+            "refE_file":"refE", # reference energy file
+            "refF_file":"refF", # reference force norm file
+            "ref_eV":True, # units for reference energy is in eV
+            "relative_force":True, # force norms are relative as refE
+            "force_weight":1e-6, # penalty weight for force norms
+            "harmonic":0, # harmonic constraint on initial parameters
             "datafile":"data0", # data file with initial structure
             "initfile":"ffield.temp", # initial template file
             "midfile":"ffield.currentbest", # intermediate file
             "endfile":"ffield.end", # final file
-            "bound":0.1, # define range of parameters 
-            "bound2":0.1, # define range of parameters 
+            "bound":0.1, # define range of parameters with "{"
+            "bound2":0.1, # define range of parameters  with "["
             "stopfile":"STOP", # file for early stopping
-            "seed":None, # file for early stopping
+            "seed":None, # seed for random number
             "tol":0.01, # tolerance for convergence
-            "workers":4, # file for early stopping
+            "workers":4, # number of cpus
             "maxiter":1000, # maximum number of iteration
+            "optimizer":"differential_evolution", # maximum number of iteration
             "scrdir":"scr" # scratch directory
-    }
-    isconfig=os.path.isfile(cfile)
-    if dump_config:
-        if isconfig: os.rename(cfile,cfile+".bk")
-        with open(cfile,"w") as f:
-            json.dump(self.option,f,indent=1)
-        sys.exit()
+}
+
+class reaxfit():
+  def __init__(self,cfile="config.json"):
+    self.cfile=cfile
+    self.option=default_option
     return
+
   def changes(self,para,file_name,atm1,atm2,numbers):
     with open(file_name) as f:
         text=f.read().splitlines()
@@ -99,6 +100,7 @@ class reaxfit():
     l.insert(gyou,f"{result}\n")
     with open(file_name,mode="w")as f:
         f.writelines(l)
+
   def config(self,**kwargs):
     global dump_best
     if hasattr(kwargs,"cfile"): self.cfile=kwargs["cfile"]
@@ -118,18 +120,34 @@ class reaxfit():
         opt.update(**{k:kwargs[k] for k in optk})
         if(optk != kwargs.keys()): 
             print("unrecognized options: ",*(kwargs.keys()-optk))
+    self.option=opt
     midfile=opt["midfile"]
     stopfile=opt["stopfile"]
     for k in opt:
         setattr(self,k,opt[k])
     # create scratch directory
     os.makedirs(self.scrdir,exist_ok=True)
-    with open(self.refE_file) as f:
-      refE=f.read().split()
-    with open(self.refF_file) as f:
-      refF=f.read().split()
-    refE=np.array(refE,dtype=float)
-    refF=np.array(refF,dtype=float)
+    # conver eV to kcal/mol if refE is in eV
+    _coeff = 1.0/0.043364124 if self.ref_eV else 1.0
+    if os.path.isfile(self.refE_file):
+      with open(self.refE_file) as f:
+        refE=f.read().split()
+        _idx=[ i for i,v in enumerate(refE) if "*" in v ]+[len(refE)]
+        if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be reference
+        self.baseIdx=np.hstack([[_idx[i]]*(_idx[i+1]-_idx[i]) for i in range(len(_idx)-1)])
+        refE=[en.replace("*","") for en in refE]
+    else:
+      self.baseIdx=np.array([0])
+      refE=[0.0]
+    if os.path.isfile(self.refF_file):
+      with open(self.refF_file) as f:
+        refF=f.read().split()
+    else:
+      refF=[0.0]
+    refE=np.array(refE,dtype=float)*_coeff # relative energy
+    refE-=refE[self.baseIdx]
+    refF=np.array(refF,dtype=float)*_coeff
+    if self.relative_force: refF-=refF[self.baseIdx]
     # read template and x0
     with open(self.initfile) as f:
       _template=f.read()
@@ -185,17 +203,22 @@ class reaxfit():
           y=[f"{{{xx}" for xx in _x]
           f.write(template.format(*y))
       if os.path.isfile(stopfile):
-          print("optimization will be stopped")
+          print("optimization will be stopped by the stop file")
           os.remove(stopfile)
           return True
     dump_best=callbackF
     return
   def set_eval(self,func):
     global wrap_eval
+    _x0=np.array(self.x0)
     def wrap_eval(*args,**kwargs):
       pid=os.getpid()
       pes,fns=self.reax(*args,pid=pid)
-      return func(pes,fns,self.refE,self.refF)
+      output = func(pes,fns,self.refE,self.refF) 
+      if self.harmonic > 0:
+        deltax=(np.array(args[0])-_x0)/(_x0+0.01)
+        output+=deltax@deltax*self.harmonic
+      return output
     return wrap_eval
   def reax(self,xk=None,pid=0):
       x=xk if xk is not None else self.x0
@@ -229,31 +252,35 @@ class reaxfit():
   def fit(self,func=None):
       global dump_best
       if not hasattr(self,"x0"): self.config()
+      print("config parameters for fitting")
+      json.dump(self.option,sys.stdout)
+      print("")
       #refE,refF=self.refE,self.refF
       print(f"initial {len(self.x0)} parameters : {self.x0}")
       if not func:
-          _idx0=np.where(self.refE==0.0)[0]
-          idx0=_idx0[0] if _idx0 else 0
           @self.set_eval
           def default_eval(pes,fns,refE,refF):
-            fns*=0.043364124 # kcal/mol to ev
-            pes-=pes[idx0] # initial structure is reference by default
-            pes*=0.043364124 # kcal/mol to ev
-            pes+=refE[idx0]
+            pes0=pes[0]
+            pes-=pes[self.baseIdx] # initial structure is reference by default
             pes-=refE
+            if self.relative_force: fns-=fns[self.baseIdx]
             fns-=refF
-            return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[idx0]*fns[idx0]/10
+            fns*=self.force_weight
+            fmax=np.abs(fns).max()
+            return np.sign(pes0)*np.log10(np.abs(pes0)+1) + np.log10(fns@fns+1)
+            #return pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
+            #return pes@pes + np.linalg.norm(fns)/len(fns)/10+fns[0]*fns[0]/10
           func=default_eval
-      result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
+      if self.optimizer == "differential_evolution":
+        result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
                                   disp=True,maxiter=self.maxiter,tol=self.tol,callback=dump_best,popsize=16,seed=self.seed)
-      #print(result)
+      else:
+        result = minimize(func,x0=self.x0,method=self.optimizer,tol=self.tol,callback=dump_best,jac='3-point') 
+      print(result)
       dump_best(result.x,fout=self.endfile)
       self.result=result
       self.E,self.F=self.reax(result.x)
       return result
 
 if __name__ =='__main__':
-    reax=reaxfit()
-    result=reax.fit()
-    pes,fns=reax.reax(result.x)
-    print(pes,fns)
+    pass
