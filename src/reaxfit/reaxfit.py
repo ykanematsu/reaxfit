@@ -25,7 +25,8 @@ default_option={
             "workers":4, # number of cpus
             "maxiter":1000, # maximum number of iteration
             "optimizer":"differential_evolution", # maximum number of iteration
-            "scrdir":"scr" # scratch directory
+            "scrdir":"scr", # scratch directory
+            "uniform":"False"
 }
 
 class reaxfit():
@@ -239,11 +240,17 @@ class reaxfit():
           lmp.command("run 0")
           pes.append(lmp.get_thermo("pe"))
           fns.append(lmp.get_thermo("fnorm"))
+       if self.uniform == "True":
+        b="add yes purge yes replace no "
+      else:
+        b=""
       for i in range(1,len(self.refE)):
-          lmp.command(f"read_dump {i}.xyz 0 x y z box no format xyz")
-          lmp.command("run 0")
-          pes.append(lmp.get_thermo("pe"))
-          fns.append(lmp.get_thermo("fnorm"))
+        a=f"read_dump {i}.xyz 0 x y z box no "
+        c="format xyz"
+        lmp.command(a+b+c)
+        lmp.command("run 0")
+        pes.append(lmp.get_thermo("pe"))
+        fns.append(lmp.get_thermo("fnorm"))
       lmp.close()
       pes=np.array(pes)
       fns=np.array(fns)
