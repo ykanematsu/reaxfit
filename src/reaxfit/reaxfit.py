@@ -240,7 +240,7 @@ class reaxfit():
           lmp.command("run 0")
           pes.append(lmp.get_thermo("pe"))
           fns.append(lmp.get_thermo("fnorm"))
-       if self.uniform == "True":
+      if self.uniform == "False":
         b="add yes purge yes replace no "
       else:
         b=""
