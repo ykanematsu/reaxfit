@@ -148,8 +148,8 @@ class reaxfit():
     # read template and x0
     with open(self.initfile) as f:
       _template=f.read()
-    with open("0.xyz") as f:
-      _xyz=f.read()
+    # with open("0.xyz") as f:
+    #   _xyz=f.read()
     regex=re.compile("[\{\[][\d.-]+")
     x0=regex.findall(_template)
     isBound1=[x.startswith("{") for x in x0]
@@ -180,9 +180,9 @@ class reaxfit():
     template=regex.sub("{}",_template)
     self.template=template
     # get elements from templates
-    #eles=re.findall(r"\n *(:?[A-Z][a-z]?)",template)
+    eles=re.findall(r"\n *(:?[A-Z][a-z]?) ",template)
     #idxs=sorted(set(re.findall("\n *\d+ +(\d+) +",_xyz)))
-    eles=re.findall(r"\n *(:?[A-Z][a-z]?)",_xyz)
+    #eles=re.findall(r"\n *(:?[A-Z][a-z]?)",_xyz)
     eles=sorted(set(eles),key=eles.index)
     #idxs=[int(i) for i in idxs]
     #eles=[eles[i-1] for i in idxs]
