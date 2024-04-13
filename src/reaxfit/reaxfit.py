@@ -211,6 +211,7 @@ class reaxfit():
 
   def set_eval(self,func):
     global wrap_eval
+    if not hasattr(self,"x0"): self.config()
     _x0=np.array(self.x0)
     def wrap_eval(*args,**kwargs):
       pid=os.getpid()
