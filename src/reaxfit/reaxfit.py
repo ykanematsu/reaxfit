@@ -3,6 +3,9 @@ import json,os,sys,re
 import numpy as np
 from scipy.optimize import differential_evolution, minimize
 
+# global parameters are required for multiprocessing
+def wrap_eval(): pass
+
 default_option={
             "refE_file":"refE", # reference energy file
             "refF_file":"refF", # reference force norm file
@@ -183,7 +186,7 @@ class reaxfit():
     eles=re.findall(r"\n *(:?[A-Z][a-z]?) ",template)
     #idxs=sorted(set(re.findall("\n *\d+ +(\d+) +",_xyz)))
     #eles=re.findall(r"\n *(:?[A-Z][a-z]?)",_xyz)
-    eles=sorted(set(eles),key=eles.index)
+    #eles=sorted(set(eles),key=eles.index)
     #idxs=[int(i) for i in idxs]
     #eles=[eles[i-1] for i in idxs]
     self.elements=" ".join(eles)
@@ -206,6 +209,19 @@ class reaxfit():
         os.remove(stopfile)
         return True
 
+  def set_eval(self,func):
+    global wrap_eval
+    _x0=np.array(self.x0)
+    def wrap_eval(*args,**kwargs):
+      pid=os.getpid()
+      pes,fns=self.reax(*args,pid=pid)
+      output = func(pes,fns,self.refE,self.refF) 
+      if self.harmonic > 0:
+        deltax=(np.array(args[0])-_x0)/(_x0+0.01)
+        output+=deltax@deltax*self.harmonic
+      return output
+    return wrap_eval
+
   def reax(self,xk=None,pid=0):
       x=xk if xk is not None else self.x0
       ffname=f"{self.scrdir}/ffield.reax.{pid}"
@@ -222,7 +238,7 @@ class reaxfit():
               f"pair_coeff      * * {ffname} {elements}",
               "fix             1 all qeq/reaxff 1 0.0 10.0 1.0e-6 reaxff"]
           lmp.commands_list(cmds)
-          lmp.command("run 0")
+          lmp.command("run 0 post no")
           pes.append(lmp.get_thermo("pe"))
           fns.append(lmp.get_thermo("fnorm"))
       if self.uniform == "False":
@@ -233,7 +249,7 @@ class reaxfit():
         a=f"read_dump {i}.xyz 0 x y z box no "
         c="format xyz"
         lmp.command(a+b+c)
-        lmp.command("run 0")
+        lmp.command("run 0 post no")
         pes.append(lmp.get_thermo("pe"))
         fns.append(lmp.get_thermo("fnorm"))
       lmp.close()
