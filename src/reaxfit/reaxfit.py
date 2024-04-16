@@ -151,10 +151,11 @@ class reaxfit():
         refF=f.read().split()
     else:
       refF=[0.0]
-    refE=np.array(refE,dtype=float)*_coeff # relative energy
-    refE-=refE[self.base_indices]
-    refF=np.array(refF,dtype=float)*_coeff
-    if self.relative_force: refF-=refF[self.base_indices]
+    self.refE=np.array(refE,dtype=float)*_coeff # raw energy
+    self.refF=np.array(refF,dtype=float)*_coeff # raw force norm
+    self.refE_relative = self.refE - self.refE[self.base_indices]
+    self.refF_relative = self.refF.copy()
+    if self.relative_force: self.refF_relative-=self.refF[self.base_indices]
     # read template and x0
     with open(self.initfile) as f:
       _template=f.read()
@@ -193,8 +194,6 @@ class reaxfit():
     #idxs=[int(i) for i in idxs]
     #eles=[eles[i-1] for i in idxs]
     self.elements=" ".join(eles)
-    self.refE=refE
-    self.refF=refF
     #dump_best=self.callbackF
     return
 
@@ -266,9 +265,9 @@ class reaxfit():
     pid=os.getpid()
     pes,fns=self.reax(*args,pid=pid)
     pes-=pes[self.base_indices] # initial structure is base by default
-    pes-=self.refE
+    pes-=self.refE_relative
     if self.relative_force: fns-=fns[self.base_indices]
-    fns-=self.refF
+    fns-=self.refF_relative
     fns*=self.force_weight
     fmax=np.abs(fns).max()
     output = pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
