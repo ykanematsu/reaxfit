@@ -24,9 +24,10 @@ default_option={
             "tol":0.01, # tolerance for convergence
             "workers":4, # number of cpus
             "maxiter":1000, # maximum number of iteration
+            "popsize":16, # popsize for differential_evolution
             "optimizer":"differential_evolution", # maximum number of iteration
             "scrdir":"scr", # scratch directory
-            "uniform":"False"
+            "uniform":False
 }
 
 class reaxfit():
@@ -127,17 +128,23 @@ class reaxfit():
         setattr(self,k,opt[k])
     # create scratch directory
     os.makedirs(self.scrdir,exist_ok=True)
-    # conver eV to kcal/mol if refE is in eV
+    # convert eV to kcal/mol if refE is in eV
     _coeff = 1.0/0.043364124 if self.ref_eV else 1.0
+    # define the base points for relative energy
     if os.path.isfile(self.refE_file):
       with open(self.refE_file) as f:
         refE=f.read().split()
-        _idx=[ i for i,v in enumerate(refE) if "*" in v ]+[len(refE)]
-        if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be reference
-        self.baseIdx=np.hstack([[_idx[i]]*(_idx[i+1]-_idx[i]) for i in range(len(_idx)-1)])
+        _idx=[ i for i,v in enumerate(refE) if "*" in v ]
+        if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be base
+        _diff=np.diff(_idx+[len(refE)])
+        self.base_indices=np.hstack([[_idx[i]]*d for i,d in enumerate(_diff)])
+        _idx2=[ i for i,v in enumerate(refE) if "**" in v ]
+        # set diff mode
+        if _idx2:
+          self.base_indices+=[j*(_idx[i] in _idx2) for i,d in enumerate(_diff) for j in np.roll(range(d),1)]
         refE=[en.replace("*","") for en in refE]
     else:
-      self.baseIdx=np.array([0])
+      self.base_indices=np.array([0])
       refE=[0.0]
     if os.path.isfile(self.refF_file):
       with open(self.refF_file) as f:
@@ -145,9 +152,9 @@ class reaxfit():
     else:
       refF=[0.0]
     refE=np.array(refE,dtype=float)*_coeff # relative energy
-    refE-=refE[self.baseIdx]
+    refE-=refE[self.base_indices]
     refF=np.array(refF,dtype=float)*_coeff
-    if self.relative_force: refF-=refF[self.baseIdx]
+    if self.relative_force: refF-=refF[self.base_indices]
     # read template and x0
     with open(self.initfile) as f:
       _template=f.read()
@@ -162,12 +169,8 @@ class reaxfit():
     self.template = _template
     # change {S
     # define bounds
-    for x in self.x0:
-        if x==0:
-            print("error:0 cannot be used as a parameter.")
-            sys.exit(1)
-        else:
-            pass
+    if 0 in self.x0:
+      sys.exit("error:0 cannot be used as a ffield parameter.")
     bounds=[]
     for i,x in enumerate(self.x0):
         if isBound1[i] =="True":
@@ -242,7 +245,7 @@ class reaxfit():
           lmp.command("run 0 post no")
           pes.append(lmp.get_thermo("pe"))
           fns.append(lmp.get_thermo("fnorm"))
-      if self.uniform == "False":
+      if self.uniform == "False" or not self.uniform:
         b="add yes purge yes replace no "
       else:
         b=""
@@ -262,14 +265,12 @@ class reaxfit():
     _x0=np.array(self.x0)
     pid=os.getpid()
     pes,fns=self.reax(*args,pid=pid)
-    pes0=pes[0]
-    pes-=pes[self.baseIdx] # initial structure is reference by default
+    pes-=pes[self.base_indices] # initial structure is base by default
     pes-=self.refE
-    if self.relative_force: fns-=fns[self.baseIdx]
+    if self.relative_force: fns-=fns[self.base_indices]
     fns-=self.refF
     fns*=self.force_weight
     fmax=np.abs(fns).max()
-    #return np.sign(pes0)*np.log10(np.abs(pes0)+1) + np.log10(fns@fns+1)
     output = pes@pes + np.linalg.norm(fns)+np.abs(pes).max()*np.abs(fns).max()+fmax**2
     if self.harmonic > 0:
       deltax=(np.array(args[0])-_x0)/(np.abs(_x0)+0.01)
@@ -287,7 +288,7 @@ class reaxfit():
       func = myfunc if myfunc else self.default_func
       if self.optimizer == "differential_evolution":
         result = differential_evolution(func, self.bounds,workers=self.workers,x0=self.x0,updating='deferred',
-                                  disp=True,maxiter=self.maxiter,tol=self.tol,callback=self.callbackF,popsize=16,seed=self.seed)
+                                  disp=True,maxiter=self.maxiter,tol=self.tol,callback=self.callbackF,popsize=self.popsize,seed=self.seed)
       else:
         result = minimize(func,x0=self.x0,method=self.optimizer,tol=self.tol,callback=self.callbackF,jac='3-point') 
       print(result)
