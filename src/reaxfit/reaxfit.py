@@ -134,14 +134,14 @@ class reaxfit():
     if os.path.isfile(self.refE_file):
       with open(self.refE_file) as f:
         refE=f.read().split()
-        _idx=[ i for i,v in enumerate(refE) if "*" in v ]
+        _idx=[ i for i,v in enumerate(refE) if "*" in v ]+[len(refE)]
         if _idx[0] != 0: _idx = [0] + _idx # initial snapshot must be base
-        _diff=np.diff(_idx+[len(refE)])
-        self.base_indices=np.hstack([[_idx[i]]*d for i,d in enumerate(_diff)])
+        _diff=[(i,j-i) for i,j in zip(_idx[:-1],_idx[1:])]
+        self.base_indices=np.hstack([[i]*d for i,d in _diff])
         _idx2=[ i for i,v in enumerate(refE) if "**" in v ]
         # set diff mode
         if _idx2:
-          self.base_indices+=[j*(_idx[i] in _idx2) for i,d in enumerate(_diff) for j in np.roll(range(d),1)]
+          self.base_indices+=[j*(i in _idx2) for i,d in _diff for j in np.roll(range(d),1)]
         refE=[en.replace("*","") for en in refE]
     else:
       self.base_indices=np.array([0])
@@ -283,7 +283,6 @@ class reaxfit():
       print("config parameters for fitting")
       json.dump(self.option,sys.stdout)
       print("")
-      #refE,refF=self.refE,self.refF
       print(f"initial {len(self.x0)} parameters : {self.x0}")
       func = myfunc if myfunc else self.default_func
       if self.optimizer == "differential_evolution":
