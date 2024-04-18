@@ -1,8 +1,9 @@
 # .github/workflows/pyrelease.yml
 name: pyrelease
 on:
-  release:
-    types: [published]
+  pull_request:
+    branches: [main]
+    types: [closed]
 jobs:
   pypi-release:
     name: Build and publish Python 🐍 distributions 📦 to PyPI
