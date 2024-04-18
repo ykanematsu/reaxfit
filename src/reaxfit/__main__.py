@@ -44,9 +44,9 @@ elif args.runtype == "check":
     reax=reaxfit()
     reax.config(initfile=target_file,**newopts)
     pes,fns=reax.reax()
-    print(f"reaxff absolute energy and force norm for {target_file} at base points (kcal/mol)")
-    print('E:',*[f'{s:.5f}' for s in pes[np.unique(reax.base_indices)]])
-    print('F:',*[f'{s:.3f}' for s in fns[np.unique(reax.base_indices)]])
+    print(f"reaxff absolute energy and force norm for {target_file}  (kcal/mol)")
+    print('E:',*[f'{s:.5f}' for s in pes])
+    print('F:',*[f'{s:.3f}' for s in fns])
     print(f"reaxff relative energy and force norm for {target_file} without optimization (kcal/mol)")
     print('E:',*[f'{s:8.3f}' for s in pes-pes[reax.base_indices]])
     if reax.relative_force: fns-=fns[reax.base_indices]
