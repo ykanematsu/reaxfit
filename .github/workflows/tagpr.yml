@@ -10,8 +10,7 @@ jobs:
     environment: #release
       name: testpypi
       url: https://test.pypi.org/p/reaxfit
-    permissions:
-      id-token: write
+    permissions: write-all
     steps:
     - uses: actions/checkout@v4
     - id: tagpr
