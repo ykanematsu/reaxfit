@@ -1,13 +1,13 @@
 # .github/workflows/pyrelease.yml
 name: pyrelease
 on:
-  pull_request:
-    branches: [main]
-    types: [closed]
+  release:
+    types: [released]
+    #    branches: [main]
+    #    types: [closed]
 jobs:
   pypi-release:
     name: Build and publish Python 🐍 distributions 📦 to PyPI
-    if: startsWith(github.head_ref, 'tagpr-')
     runs-on: ubuntu-latest
     environment: #release
       name: testpypi

@@ -6,8 +6,39 @@ on:
 jobs:
   tagpr:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: #release
+      name: testpypi
+      url: https://test.pypi.org/p/reaxfit
+    permissions:
+      id-token: write
     steps:
-    - uses: actions/checkout@v3
-    - uses: Songmu/tagpr@v1
+    - uses: actions/checkout@v4
+    - id: tagpr
+      uses: Songmu/tagpr@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - run: echo ${{ steps.tagpr.outputs.tag }}
+      if: steps.tagpr.outputs.tag != ''
+    - run: git describe --tags
+      if: steps.tagpr.outputs.tag != ''
+    - name: Set up Python 3.x
+      if: steps.tagpr.outputs.tag != ''
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install pypa/build
+      if: steps.tagpr.outputs.tag != ''
+      run: >-
+        python3 -m
+        pip install
+        build
+        --user
+    - name: Build a binary wheel and a source tarball
+      if: steps.tagpr.outputs.tag != ''
+      run: python3 -m build --sdist
+    - name: Publish distribution 📦 to PyPI
+      if: steps.tagpr.outputs.tag != ''
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
