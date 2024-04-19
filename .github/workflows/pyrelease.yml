@@ -1,8 +1,7 @@
 # .github/workflows/pyrelease.yml
 name: pyrelease
 on:
-  release:
-    types: [released]
+  workflow_dispatch:
     #    branches: [main]
     #    types: [closed]
 jobs:
@@ -15,7 +14,9 @@ jobs:
     permissions:
       id-token: write
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+      with: 
+        fetch-tags: true
     - name: Set up Python 3.x
       uses: actions/setup-python@v4
       with:
