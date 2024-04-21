@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: #release
-      name: testpypi
-      url: https://test.pypi.org/p/reaxfit
+      name: pypi
+      url: https://pypi.org/p/reaxfit
     permissions: write-all
     steps:
     - uses: actions/checkout@v4
@@ -39,5 +39,3 @@ jobs:
     - name: Publish distribution 📦 to PyPI
       if: steps.tagpr.outputs.tag != ''
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
