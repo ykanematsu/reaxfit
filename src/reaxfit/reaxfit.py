@@ -174,7 +174,7 @@ class reaxfit():
       sys.exit("error:0 cannot be used as a ffield parameter.")
     bounds=[]
     for i,x in enumerate(self.x0):
-        if isBound1[i] =="True":
+        if isBound1[i]:
             delta = abs(float(self.bound)*x)
             t = (x-delta,x+delta)
             bounds.append(t)
