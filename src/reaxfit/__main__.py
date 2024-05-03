@@ -6,7 +6,7 @@ from .reaxfit import reaxfit, default_option
 from argparse import ArgumentParser
 
 if len(sys.argv) <2:
-    print("useage: python3 -m reaxfit [init|fit|check]")
+    print("useage: python3 -m reaxfit [init|fit|check|version]")
     sys.exit()
 parser = ArgumentParser()
 parser.add_argument('runtype')
@@ -47,12 +47,22 @@ elif args.runtype == "check":
     print(f"reaxff absolute energy and force norm for {target_file}  (kcal/mol)")
     print('E:',*[f'{s:.5f}' for s in pes])
     print('F:',*[f'{s:.3f}' for s in fns])
-    print(f"reaxff relative energy and force norm for {target_file} without optimization (kcal/mol)")
+    print(f"reaxff relative energy and force norm for {target_file}  (kcal/mol)")
     print('E:',*[f'{s:8.3f}' for s in pes-pes[reax.base_indices]])
     if reax.relative_force: fns-=fns[reax.base_indices]
     print('F:',*[f'{s:8.3f}' for s in fns])
     print(f"reference relative energy and force norm")
     print('E:',*[f'{s:8.3f}' for s in reax.refE_relative])
     print('F:',*[f'{s:8.3f}' for s in reax.refF_relative])
+elif args.runtype == "version":
+    if __version__ == '0.0.1':
+        from subprocess import check_output
+        dir_path=os.path.dirname(__file__)
+        try:
+            __version__=check_output(['git', 'describe', '--tags'],cwd=dir_path)
+            __version__=__version__.decode('ascii').strip()
+        except:
+            pass
+    print(__version__)
 else:
     print(f"unknown runtype: {args.runtype}")
