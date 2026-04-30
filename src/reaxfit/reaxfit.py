@@ -192,8 +192,11 @@ class reaxfit():
     if os.path.isfile("0.xyz"):
       with open("0.xyz") as f:
         _xyz=f.read().replace("\r","")
-      eles=re.findall(r"\n *(:?[A-Z][a-z]?)\b",_xyz)
-      eles=sorted(set(eles),key=eles.index)
+      _xyz=re.sub(r"^.*\n.*","",_xyz)
+      _eles=re.findall(r"\n *(:?[A-Z][a-z]?)\b",_xyz)
+      if len(_eles)>0:
+        eles=sorted(set(_eles),key=_eles.index)
+      del _eles,_xyz
     #idxs=[int(i) for i in idxs]
     #eles=[eles[i-1] for i in idxs]
     self.elements=" ".join(eles)
