@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.3.2](https://github.com/ykanematsu/reaxfit/compare/v0.3.1...v0.3.2) - 2026-04-30
+- Develop by @ykanematsu in https://github.com/ykanematsu/reaxfit/pull/37
+
 ## [v0.3.1](https://github.com/ykanematsu/reaxfit/compare/v0.3.0...v0.3.1) - 2026-04-30
 - Readd 0.xyz to be read by @ykanematsu in https://github.com/ykanematsu/reaxfit/pull/35
 
