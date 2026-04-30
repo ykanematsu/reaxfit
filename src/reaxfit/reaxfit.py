@@ -189,8 +189,11 @@ class reaxfit():
     # get elements from templates
     eles=re.findall(r"\n *(:?[A-Z][a-z]?) ",template)
     #idxs=sorted(set(re.findall("\n *\d+ +(\d+) +",_xyz)))
-    #eles=re.findall(r"\n *(:?[A-Z][a-z]?)",_xyz)
-    #eles=sorted(set(eles),key=eles.index)
+    if os.path.isfile("0.xyz"):
+      with open("0.xyz") as f:
+        _xyz=f.read().replace("\r","")
+      eles=re.findall(r"\n *(:?[A-Z][a-z]?)\b",_xyz)
+      eles=sorted(set(eles),key=eles.index)
     #idxs=[int(i) for i in idxs]
     #eles=[eles[i-1] for i in idxs]
     self.elements=" ".join(eles)
